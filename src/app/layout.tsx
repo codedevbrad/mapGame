@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Header from "./(layout)/header";
+import EffectsOverlay from "./(map)/components/EffectsOverlay";
+import InitialLoadingGate from "./(map)/components/InitialLoadingGate";
+import SettingsPopover from "./(layout)/SettingsPopover";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,9 +30,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased m-0 h-screen overflow-hidden relative`}
       >
-        {children}
+        <InitialLoadingGate>
+          <div className="flex h-full w-full flex-col overflow-hidden">
+            <Header />
+            <div className="w-full flex-1 min-h-0">{children}</div>
+          </div>
+          <EffectsOverlay />
+          
+         <SettingsPopover />
+        </InitialLoadingGate>
       </body>
     </html>
   );
