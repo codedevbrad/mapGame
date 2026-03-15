@@ -160,6 +160,29 @@ body {
   }
 }
 
+.intel-code-title {
+  font-family: var(--font-share-tech-mono), var(--font-geist-mono), "Courier New", Courier, monospace;
+  display: inline-block;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.27em;
+  line-height: 1.35;
+  color: #ffc58f; 
+  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+}
+
+.intel-code-text {
+  font-family: var(--font-share-tech-mono), var(--font-geist-mono), "Courier New", Courier, monospace;
+  display: inline-block;
+  font-size: 0.88rem;
+  letter-spacing: 0.12em;
+  line-height: 1.35;
+  color: #ffc58f; 
+  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+}
+
 
 .map-plus-cursor .mapboxgl-canvas-container,
 .map-plus-cursor .mapboxgl-canvas,

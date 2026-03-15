@@ -16,6 +16,7 @@
     "postprocessing": "^6.38.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "satellite.js": "^6.0.2",
     "three": "^0.183.2",
     "zustand": "^5.0.11"
   },

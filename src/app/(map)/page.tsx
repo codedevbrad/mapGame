@@ -1,15 +1,21 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import MapboxMap from "@/app/(map)/components/Mapbox"
+import MapboxMap from "@/app/(map)/mapbox/Mapbox"
 import VisualControls from "@/app/(map)/components/VisualControls"
 import CitySelector, { CITY_PRESETS } from "@/app/(map)/components/CitySelector"
 import { useVisualSettingsStore } from "@/app/stores/useVisualSettingsStore"
+import SideLeft from "@/app/(map)/_sides/side.left"
+import SideRight from "@/app/(map)/_sides/side.right"
+import type { SatelliteListItem } from "@/app/(map)/mapbox/types"
 
 export default function Page() {
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const [selectedCityId, setSelectedCityId] = useState<string>(CITY_PRESETS[0].id)
   const [flyToKey, setFlyToKey] = useState(0)
+  const [satellites, setSatellites] = useState<SatelliteListItem[]>([])
+  const [selectedSatelliteId, setSelectedSatelliteId] = useState<string | null>(null)
+  const [selectedSatelliteFocusKey, setSelectedSatelliteFocusKey] = useState(0)
   const shaderMode = useVisualSettingsStore((state) => state.shaderMode)
   const shaderIntensity = useVisualSettingsStore((state) => state.shaderIntensity)
   const backgroundDimOpacity = useVisualSettingsStore((state) => state.backgroundDimOpacity)
@@ -28,24 +34,47 @@ export default function Page() {
     setSelectedCityId(cityId)
     setFlyToKey((key) => key + 1)
   }, [])
+  const handleSatelliteSelect = useCallback((satelliteId: string | null) => {
+    setSelectedSatelliteId(satelliteId)
+  }, [])
+  const handleSatelliteFocus = useCallback((satelliteId: string) => {
+    setSelectedSatelliteId(satelliteId)
+    setSelectedSatelliteFocusKey((key) => key + 1)
+  }, [])
+  const handleSatellitesChange = useCallback((nextSatellites: SatelliteListItem[]) => {
+    setSatellites(nextSatellites)
+    setSelectedSatelliteId((currentSelectedId) =>
+      currentSelectedId && !nextSatellites.some((satellite) => satellite.id === currentSelectedId)
+        ? null
+        : currentSelectedId
+    )
+  }, [])
 
   return (
     <main className="relative flex h-full w-full flex-col overflow-hidden">
-      <div className="flex w-full flex-1 min-h-0 items-center justify-center">
-        <div className="w-1/3 h-full p-4">
-          leftside
+      <div className="flex w-full flex-1 min-h-0 items-center overflow-hidden">
+        <SideLeft />
+        <div className="relative flex-1 min-w-0 h-[90%] flex items-center justify-center">
+          <MapboxMap
+            shaderMode={shaderMode}
+            shaderIntensity={shaderIntensity}
+            backgroundDimOpacity={backgroundDimOpacity}
+            center={selectedCity.center}
+            flyToKey={flyToKey}
+            onMapReady={handleMapReady}
+            selectedSatelliteId={selectedSatelliteId}
+            selectedSatelliteFocusKey={selectedSatelliteFocusKey}
+            onSatelliteSelect={handleSatelliteSelect}
+            onSatellitesChange={handleSatellitesChange}
+          />
         </div>
-        <MapboxMap
-          shaderMode={shaderMode}
-          shaderIntensity={shaderIntensity}
-          backgroundDimOpacity={backgroundDimOpacity}
-          center={selectedCity.center}
-          flyToKey={flyToKey}
-          onMapReady={handleMapReady}
+
+        <SideRight
+          satellites={satellites}
+          selectedSatelliteId={selectedSatelliteId}
+          onSatelliteSelect={handleSatelliteSelect}
+          onSatelliteFocus={handleSatelliteFocus}
         />
-        <div className="w-1/3 h-full p-4">
-          rightside
-        </div>
       </div>
       <div className="absolute bottom-5 left-1/2 z-30 flex w-[min(1100px,94vw)] -translate-x-1/2 items-center justify-between gap-4 rounded-md border border-cyan-400/45 bg-black/70 px-4 py-3 text-cyan-100 shadow-lg backdrop-blur-sm">
         <CitySelector
