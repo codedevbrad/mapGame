@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { signOut } from "next-auth/react"
 import { useUser } from "@/domains/user/_contexts/useUser"
+import Profile from "@/domains/user/_components/profile"
 
 type TimeResponse = {
   isoTime: string
@@ -65,14 +65,6 @@ export default function Header() {
     return formatUtcStamp(now)
   }, [now])
 
-  const handlePlayClick = useCallback(() => {
-    if (user) {
-      router.push("/game")
-      return
-    }
-    router.push("/auth/signin?callbackUrl=%2Fgame")
-  }, [router, user])
-
   return (
     <header className="w-full flex justify-between items-center p-4">
       <div className="hud-title">WORLDVIEW</div>
@@ -81,30 +73,13 @@ export default function Header() {
         <span>{isLoading ? "REC SYNCING..." : `REC ${stamp}`}</span>
       </div>
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handlePlayClick}
-          disabled={isUserLoading}
-          className="cursor-pointer rounded border border-cyan-400/45 bg-black/65 px-3 py-1 text-xs uppercase tracking-wide text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Play
-        </button>
+      
         {isUserLoading ? (
           <span className="text-xs text-cyan-100/70">Loading user...</span>
         ) : user ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-cyan-100/90">
-              {user.username}
-            </span>
-            <button
-              type="button"
-              onClick={async () => {
-                await signOut({ callbackUrl: "/" })
-              }}
-              className="cursor-pointer rounded border border-cyan-400/45 bg-black/65 px-3 py-1 text-xs uppercase tracking-wide text-cyan-100"
-            >
-              Sign out
-            </button>
+           
+         <Profile username={user.username} />
           </div>
         ) : (
           <Link

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { signInAction } from "@/domains/user/db";
+import { signIn } from "next-auth/react";
 import { mutate } from "swr";
 
 type SignInFormProps = {
@@ -23,10 +23,14 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
     setError("");
 
     startTransition(async () => {
-      const result = await signInAction(username, password);
+      const result = await signIn("credentials", {
+        username,
+        password,
+        redirect: false,
+      });
 
-      if (!result.success) {
-        setError(result.error);
+      if (result?.error) {
+        setError("Invalid username or password");
       } else {
         // Revalidate the user cache to update the header
         await mutate("user");

@@ -1,81 +1,48 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { LogIn, LogOut } from "lucide-react";
-import { signOut } from "next-auth/react";
-
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { signOut } from "next-auth/react"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useUser } from "@/domains/user/_contexts/useUser";
+} from "@/components/ui/dropdown-menu"
 
-function getInitials(name: string) {
-  return name.slice(0, 2).toUpperCase();
+type ProfileProps = {
+  username: string
 }
 
-export function Profile() {
-  const { data: user, isLoading } = useUser();
-
-  if (isLoading) {
-    return <div className="h-8 w-24 animate-pulse rounded bg-muted" />;
+export default function Profile({ username }: ProfileProps) {
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: "/auth/signin" })
   }
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="gap-2 px-4 bg-gray-100">
-          <Avatar size="sm">
-            <AvatarFallback>
-              {getInitials(user?.username ?? "U")}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-sm">{user?.username ?? "Account"}</span>
-        </Button>
+      <DropdownMenuTrigger className="inline-flex h-8 items-center rounded-lg border border-cyan-400/45 bg-black/65 px-3 text-xs uppercase tracking-wide text-cyan-100 transition-colors hover:bg-black/80 hover:text-cyan-50">
+        {username}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        {user ? (
-          <>
-            <DropdownMenuLabel className="space-y-1">
-              <p className="text-sm leading-none font-medium">{user.username}</p>
-              <p className="text-muted-foreground text-xs">Signed in</p>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <button
-                type="button"
-                className="w-full"
-                onClick={async () => {
-                  await signOut();
-                }}
-              >
-                <LogOut />
-                Sign Out
-              </button>
-            </DropdownMenuItem>
-          </>
-        ) : (
-          <>
-            <DropdownMenuLabel>Not signed in</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/auth/signin">
-                <LogIn />
-                Sign In
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/auth/signup">Sign Up</Link>
-            </DropdownMenuItem>
-          </>
-        )}
+      <DropdownMenuContent
+        className="w-44 border border-cyan-400/45 bg-black text-cyan-100 ring-cyan-500/25"
+        align="end"
+      >
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-cyan-200/80">Signed in as</DropdownMenuLabel>
+          <DropdownMenuItem className="cursor-default text-cyan-100 focus:bg-cyan-900/35 focus:text-cyan-100">
+            {username}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          className="focus:bg-cyan-900/45 focus:text-cyan-100"
+        >
+          Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

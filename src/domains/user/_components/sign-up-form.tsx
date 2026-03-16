@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { signUpAction } from "@/domains/user/db";
+import { signIn } from "next-auth/react";
 import { mutate } from "swr";
 
 type SignUpFormProps = {
@@ -39,6 +40,18 @@ export function SignUpForm({ callbackUrl }: SignUpFormProps) {
       if (!result.success) {
         setError(result.error);
       } else {
+        const signInResult = await signIn("credentials", {
+          username,
+          password,
+          redirect: false,
+        });
+
+        if (signInResult?.error) {
+          setError("Account created, but automatic sign-in failed. Please sign in.");
+          router.push("/auth/signin");
+          return;
+        }
+
         // User created and signed in, redirect to home
         await mutate("user");
         router.push(targetAfterSignup);
