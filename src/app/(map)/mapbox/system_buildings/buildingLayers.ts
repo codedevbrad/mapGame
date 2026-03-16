@@ -4,6 +4,8 @@ import {
   BUILDING_HIGHLIGHT_2D_LAYER_ID,
   BUILDING_HIGHLIGHT_3D_LAYER_ID,
   BUILDING_HIT_LAYER_ID,
+  BUILDING_REGISTERED_2D_LAYER_ID,
+  BUILDING_REGISTERED_3D_LAYER_ID,
   BUILDING_SOURCE_ID
 } from "@/app/(map)/mapbox/config"
 import type { SelectedBuildingId } from "@/app/(map)/mapbox/types"
@@ -110,6 +112,31 @@ export function setHighlightedBuildingById(map: mapboxgl.Map, featureId: Selecte
   map.setFilter(BUILDING_3D_LAYER_ID, mergedFilter)
 }
 
+export function setRegisteredBuildingsByIds(
+  map: mapboxgl.Map,
+  buildingIds: Array<string | number>
+) {
+  const normalizedIds = Array.from(
+    new Set(
+      buildingIds
+        .map((id) => String(id).trim())
+        .filter((id) => id.length > 0)
+    )
+  )
+
+  const filter: mapboxgl.FilterSpecification =
+    normalizedIds.length === 0
+      ? ["==", ["id"], ""]
+      : ["in", ["to-string", ["id"]], ["literal", normalizedIds]]
+
+  if (map.getLayer(BUILDING_REGISTERED_2D_LAYER_ID)) {
+    map.setFilter(BUILDING_REGISTERED_2D_LAYER_ID, filter)
+  }
+  if (map.getLayer(BUILDING_REGISTERED_3D_LAYER_ID)) {
+    map.setFilter(BUILDING_REGISTERED_3D_LAYER_ID, filter)
+  }
+}
+
 export function ensureBuildingLayers(map: mapboxgl.Map, labelLayerId?: string) {
   const buildingLayerSpec = getBuildingLayerSpec(map)
 
@@ -206,6 +233,45 @@ export function ensureBuildingLayers(map: mapboxgl.Map, labelLayerId?: string) {
           "fill-extrusion-height": buildingLayerSpec.extrusionHeight,
           "fill-extrusion-base": buildingLayerSpec.extrusionBase,
           "fill-extrusion-opacity": 1
+        }
+      },
+      labelLayerId
+    )
+  }
+
+  if (!map.getLayer(BUILDING_REGISTERED_2D_LAYER_ID)) {
+    map.addLayer(
+      {
+        id: BUILDING_REGISTERED_2D_LAYER_ID,
+        source: buildingLayerSpec.source,
+        ...(buildingLayerSpec.sourceLayer ? { "source-layer": buildingLayerSpec.sourceLayer } : {}),
+        type: "fill",
+        minzoom: 11,
+        maxzoom: buildingLayerSpec.minzoom3d,
+        filter: ["==", ["id"], ""],
+        paint: {
+          "fill-color": "#fde047",
+          "fill-opacity": 0.35
+        }
+      },
+      labelLayerId
+    )
+  }
+
+  if (!map.getLayer(BUILDING_REGISTERED_3D_LAYER_ID)) {
+    map.addLayer(
+      {
+        id: BUILDING_REGISTERED_3D_LAYER_ID,
+        source: buildingLayerSpec.source,
+        ...(buildingLayerSpec.sourceLayer ? { "source-layer": buildingLayerSpec.sourceLayer } : {}),
+        type: "fill-extrusion",
+        minzoom: buildingLayerSpec.minzoom3d,
+        filter: ["==", ["id"], ""],
+        paint: {
+          "fill-extrusion-color": "#fde047",
+          "fill-extrusion-height": buildingLayerSpec.extrusionHeight,
+          "fill-extrusion-base": buildingLayerSpec.extrusionBase,
+          "fill-extrusion-opacity": 0.95
         }
       },
       labelLayerId

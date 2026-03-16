@@ -2,7 +2,7 @@ import type { MutableRefObject } from "react"
 import type mapboxgl from "mapbox-gl"
 import * as THREE from "three"
 import { VISUAL_SHADER_LAYER_ID } from "@/app/(map)/mapbox/config"
-import { createShaderMaterial } from "@/app/(map)/mapbox/shaderMaterial"
+import { createShaderMaterial } from "@/app/(map)/mapbox/shaders/shaderMaterial"
 import type { ShaderMode } from "@/app/(map)/components/VisualControls"
 
 type VisualShaderLayerRefs = {

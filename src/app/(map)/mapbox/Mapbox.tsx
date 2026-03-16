@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import mapboxgl from "mapbox-gl"
 import * as THREE from "three"
 import {
@@ -8,16 +8,33 @@ import {
   CITY_VIEW_PITCH,
   CITY_VIEW_ZOOM
 } from "@/app/(map)/mapbox/config"
-import { createBuildingInteractionHandlers } from "@/app/(map)/mapbox/buildingInteractions"
-import { ensureBuildingLayers, setHighlightedBuildingById } from "@/app/(map)/mapbox/buildingLayers"
-import { createShaderMaterial } from "@/app/(map)/mapbox/shaderMaterial"
+import { createBuildingInteractionHandlers } from "@/app/(map)/mapbox/system_buildings/buildingInteractions"
+import {
+  ensureBuildingLayers,
+  setHighlightedBuildingById,
+  setRegisteredBuildingsByIds
+} from "@/app/(map)/mapbox/system_buildings/buildingLayers"
+import { REGISTERED_BUILDING_IDS } from "@/app/(map)/mapbox/system_buildings/registeredBuildings"
+import { createShaderMaterial } from "@/app/(map)/mapbox/shaders/shaderMaterial"
 import type { MapboxMapProps, SelectedBuildingId } from "@/app/(map)/mapbox/types"
 import {
   ensureSatelliteTrackingLayer,
   type SatelliteTrackingLayerController
-} from "@/app/(map)/mapbox/satelliteTrackingLayer"
-import { ensureVisualShaderLayer } from "@/app/(map)/mapbox/visualShaderLayer"
+} from "@/app/(map)/mapbox/system_satalites/satelliteTrackingLayer"
+import { ensureVisualShaderLayer } from "@/app/(map)/mapbox/shaders/visualShaderLayer"
 import type { ShaderMode } from "@/app/(map)/components/VisualControls"
+import {
+  ensureVpnLayer,
+  VPN_NODE_LAYER_ID,
+  VPN_SELECTED_NODE_LAYER_ID,
+  setHighlightedVpnNode,
+  setVpnLayerNodes
+} from "@/app/(map)/mapbox/system_vpn/vpnLayer"
+import DebugSystemPopover from "@/app/(map)/mapbox/debug_system"
+import {
+  getDebugBuildingInfo,
+  type DebugBuildingInfo
+} from "@/app/(map)/mapbox/debug_system/buildingSelector/func"
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
@@ -26,15 +43,20 @@ export default function MapboxMap({
   shaderIntensity,
   backgroundDimOpacity,
   center,
+  vpnNodes = [],
+  selectedVpnNodeId = null,
+  selectedVpnNodeFocusKey = 0,
   flyToKey = 0,
   onMapReady,
   selectedSatelliteId = null,
   selectedSatelliteFocusKey = 0,
+  onVpnNodeSelect,
   onSatelliteSelect,
   onSatellitesChange
 }: MapboxMapProps) {
 
   const mapContainer = useRef<HTMLDivElement>(null)
+  const [debugBuildingInfo, setDebugBuildingInfo] = useState<DebugBuildingInfo | null>(null)
   const initialShaderModeRef = useRef<ShaderMode>(shaderMode)
   const shaderIntensityRef = useRef<number>(shaderIntensity)
   const initialCenterRef = useRef<[number, number]>(center)
@@ -46,8 +68,40 @@ export default function MapboxMap({
   const selectedBuildingIdRef = useRef<SelectedBuildingId>(null)
   const satelliteLayerControllerRef = useRef<SatelliteTrackingLayerController | null>(null)
   const selectedSatelliteIdRef = useRef<string | null>(selectedSatelliteId)
+  const vpnNodesRef = useRef<MapboxMapProps["vpnNodes"]>(vpnNodes)
+  const selectedVpnNodeIdRef = useRef<string | null>(selectedVpnNodeId)
+  const onVpnNodeSelectRef = useRef<MapboxMapProps["onVpnNodeSelect"]>(onVpnNodeSelect)
   const onSatelliteSelectRef = useRef<MapboxMapProps["onSatelliteSelect"]>(onSatelliteSelect)
   const onSatellitesChangeRef = useRef<MapboxMapProps["onSatellitesChange"]>(onSatellitesChange)
+
+  useEffect(() => {
+    vpnNodesRef.current = vpnNodes
+    if (!mapRef.current) return
+    setVpnLayerNodes(mapRef.current, vpnNodes)
+  }, [vpnNodes])
+
+  useEffect(() => {
+    selectedVpnNodeIdRef.current = selectedVpnNodeId
+    if (!mapRef.current) return
+    setHighlightedVpnNode(mapRef.current, selectedVpnNodeId)
+  }, [selectedVpnNodeId])
+
+  useEffect(() => {
+    onVpnNodeSelectRef.current = onVpnNodeSelect
+  }, [onVpnNodeSelect])
+
+  useEffect(() => {
+    if (!selectedVpnNodeId) return
+    const selectedNode = vpnNodesRef.current?.find((node) => node.id === selectedVpnNodeId)
+    if (!selectedNode) return
+    mapRef.current?.easeTo({
+      center: selectedNode.coordinates,
+      zoom: Math.max(CITY_VIEW_ZOOM + 1, 12),
+      pitch: CITY_VIEW_PITCH,
+      bearing: CITY_VIEW_BEARING,
+      duration: 1200
+    })
+  }, [selectedVpnNodeId, selectedVpnNodeFocusKey])
 
   useEffect(() => {
     selectedSatelliteIdRef.current = selectedSatelliteId
@@ -94,10 +148,39 @@ export default function MapboxMap({
         selectedBuildingPopupRef,
         selectedBuildingIdRef
       })
+    const handleVpnNodeClick = (event: mapboxgl.MapMouseEvent) => {
+      const vpnLayers = [VPN_SELECTED_NODE_LAYER_ID, VPN_NODE_LAYER_ID].filter((layerId) =>
+        Boolean(map.getLayer(layerId))
+      )
+      if (vpnLayers.length === 0) return
+
+      const vpnFeature = map
+        .queryRenderedFeatures(event.point, {
+          layers: vpnLayers
+        })
+        .find((feature) => feature.geometry.type === "Point")
+
+      if (!vpnFeature) return
+
+      const properties = (vpnFeature.properties ?? {}) as Record<string, unknown>
+      const nodeId = properties.nodeId
+      if (typeof nodeId !== "string") return
+      onVpnNodeSelectRef.current?.(nodeId)
+    }
+    const handleDebugBuildingClick = (event: mapboxgl.MapMouseEvent) => {
+      const info = getDebugBuildingInfo(map, event)
+      if (!info) {
+        setDebugBuildingInfo(null)
+        return
+      }
+      setDebugBuildingInfo(info)
+    }
 
     map.on("click", handleMapClick)
     map.on("mousemove", handleMapMouseMove)
     map.on("mouseleave", handleMapMouseLeave)
+    map.on("click", handleVpnNodeClick)
+    map.on("click", handleDebugBuildingClick)
 
     map.on("style.load", () => {
       const layers = map.getStyle().layers
@@ -106,6 +189,7 @@ export default function MapboxMap({
       )?.id
 
       ensureBuildingLayers(map, labelLayerId)
+      setRegisteredBuildingsByIds(map, REGISTERED_BUILDING_IDS)
       setHighlightedBuildingById(map, selectedBuildingIdRef.current)
       satelliteLayerControllerRef.current?.cleanup()
       satelliteLayerControllerRef.current = ensureSatelliteTrackingLayer(map, labelLayerId, {
@@ -113,6 +197,9 @@ export default function MapboxMap({
         onSatelliteSelect: (satelliteId) => onSatelliteSelectRef.current?.(satelliteId),
         onSatellitesChange: (satellites) => onSatellitesChangeRef.current?.(satellites)
       })
+      ensureVpnLayer(map, labelLayerId)
+      setVpnLayerNodes(map, vpnNodesRef.current ?? [])
+      setHighlightedVpnNode(map, selectedVpnNodeIdRef.current)
       ensureVisualShaderLayer(map, {
         initialShaderModeRef,
         shaderIntensityRef,
@@ -123,6 +210,8 @@ export default function MapboxMap({
 
     return () => {
       map.off("click", handleMapClick)
+      map.off("click", handleVpnNodeClick)
+      map.off("click", handleDebugBuildingClick)
       map.off("mousemove", handleMapMouseMove)
       map.off("mouseleave", handleMapMouseLeave)
       satelliteLayerControllerRef.current?.cleanup()
@@ -168,7 +257,7 @@ export default function MapboxMap({
 
   return (
     <div
-      className="w-full h-full"
+      className="relative w-full h-full"
       style={{ filter: `brightness(${Math.max(0.2, 1 - backgroundDimOpacity)})` }}
     >
       {/* <div className="pointer-events-none absolute  rounded-[45%] -inset-1 border-2 border-gray-800 blur-[9px]" /> */}
@@ -178,6 +267,7 @@ export default function MapboxMap({
           className="h-full w-full "
         />
       </div>
+      <DebugSystemPopover selectedBuilding={debugBuildingInfo} />
       {/* <div className="pointer-events-none absolute bottom-0 left-0 z-30 h-20 w-full bg-background" /> */}
     </div>
   )

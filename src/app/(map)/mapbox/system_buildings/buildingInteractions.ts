@@ -3,7 +3,7 @@ import mapboxgl from "mapbox-gl"
 import {
   getTopBuildingFeatureAtPoint,
   setHighlightedBuildingById
-} from "@/app/(map)/mapbox/buildingLayers"
+} from "@/app/(map)/mapbox/system_buildings/buildingLayers"
 import type { SelectedBuildingId } from "@/app/(map)/mapbox/types"
 
 function getBuildingDisplayData(feature: mapboxgl.MapboxGeoJSONFeature) {
@@ -54,12 +54,12 @@ export function createBuildingInteractionHandlers({
     popupContainer.className = "text-xs"
 
     const title = document.createElement("div")
-    title.className = "font-semibold"
+    title.className = "font-semibold text-black"
     title.textContent = name
 
     const subtitle = document.createElement("div")
-    subtitle.className = "opacity-85"
     subtitle.textContent = `Height: ${heightLabel}`
+
 
     popupContainer.appendChild(title)
     popupContainer.appendChild(subtitle)

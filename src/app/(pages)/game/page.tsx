@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import MapboxMap from "@/app/(map)/mapbox/Mapbox"
 import VisualControls from "@/app/(map)/components/VisualControls"
 import CitySelector, { CITY_PRESETS } from "@/app/(map)/components/CitySelector"
@@ -8,6 +8,11 @@ import { useVisualSettingsStore } from "@/app/stores/useVisualSettingsStore"
 import SideLeft from "@/app/(map)/_sides/side.left"
 import SideRight from "@/app/(map)/_sides/side.right"
 import type { SatelliteListItem } from "@/app/(map)/mapbox/types"
+import {
+  getAllVpnNodeGroups,
+  getAllVpnNodes,
+  getVpnNodesForGroup
+} from "@/app/(map)/mapbox/system_vpn/vpnNodes"
 
 export default function Page() {
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -16,11 +21,16 @@ export default function Page() {
   const [satellites, setSatellites] = useState<SatelliteListItem[]>([])
   const [selectedSatelliteId, setSelectedSatelliteId] = useState<string | null>(null)
   const [selectedSatelliteFocusKey, setSelectedSatelliteFocusKey] = useState(0)
+  const [selectedVpnNodeId, setSelectedVpnNodeId] = useState<string | null>(null)
+  const [selectedVpnNodeFocusKey, setSelectedVpnNodeFocusKey] = useState(0)
   const shaderMode = useVisualSettingsStore((state) => state.shaderMode)
   const shaderIntensity = useVisualSettingsStore((state) => state.shaderIntensity)
   const backgroundDimOpacity = useVisualSettingsStore((state) => state.backgroundDimOpacity)
   const setShaderMode = useVisualSettingsStore((state) => state.setShaderMode)
   const selectedCity = CITY_PRESETS.find((city) => city.id === selectedCityId) ?? CITY_PRESETS[0]
+  const vpnNodesForSelectedScope = getVpnNodesForGroup(selectedCityId)
+  const vpnNodes = getAllVpnNodes()
+  const vpnNodeGroups = getAllVpnNodeGroups()
   const handleMapReady = useCallback((map: mapboxgl.Map) => {
     mapRef.current = map
   }, [])
@@ -49,6 +59,25 @@ export default function Page() {
         : currentSelectedId
     )
   }, [])
+  const handleVpnNodeSelect = useCallback((nodeId: string | null) => {
+    setSelectedVpnNodeId(nodeId)
+  }, [])
+  const handleVpnNodeFocus = useCallback((nodeId: string, scopeId: string) => {
+    if (scopeId !== selectedCityId) {
+      setSelectedCityId(scopeId)
+      setFlyToKey((key) => key + 1)
+    }
+    setSelectedVpnNodeId(nodeId)
+    setSelectedVpnNodeFocusKey((key) => key + 1)
+  }, [selectedCityId])
+
+  useEffect(() => {
+    setSelectedVpnNodeId((currentSelectedId) =>
+      currentSelectedId && !vpnNodesForSelectedScope.some((node) => node.id === currentSelectedId)
+        ? null
+        : currentSelectedId
+    )
+  }, [vpnNodesForSelectedScope])
 
   return (
     <main className="relative flex h-full w-full flex-col overflow-hidden">
@@ -60,10 +89,14 @@ export default function Page() {
             shaderIntensity={shaderIntensity}
             backgroundDimOpacity={backgroundDimOpacity}
             center={selectedCity.center}
+            vpnNodes={vpnNodes}
+            selectedVpnNodeId={selectedVpnNodeId}
+            selectedVpnNodeFocusKey={selectedVpnNodeFocusKey}
             flyToKey={flyToKey}
             onMapReady={handleMapReady}
             selectedSatelliteId={selectedSatelliteId}
             selectedSatelliteFocusKey={selectedSatelliteFocusKey}
+            onVpnNodeSelect={handleVpnNodeSelect}
             onSatelliteSelect={handleSatelliteSelect}
             onSatellitesChange={handleSatellitesChange}
           />
@@ -72,8 +105,12 @@ export default function Page() {
         <SideRight
           satellites={satellites}
           selectedSatelliteId={selectedSatelliteId}
+          vpnNodeGroups={vpnNodeGroups}
+          selectedVpnNodeId={selectedVpnNodeId}
           onSatelliteSelect={handleSatelliteSelect}
           onSatelliteFocus={handleSatelliteFocus}
+          onVpnNodeSelect={handleVpnNodeSelect}
+          onVpnNodeFocus={handleVpnNodeFocus}
         />
       </div>
       <div className="absolute bottom-5 left-1/2 z-30 flex w-[min(1100px,94vw)] -translate-x-1/2 items-center justify-between gap-4 rounded-md border border-cyan-400/45 bg-black/70 px-4 py-3 text-cyan-100 shadow-lg backdrop-blur-sm">
