@@ -1,4 +1,4 @@
-@import "tailwindcss";
+/* @import "tailwindcss";
 @import "mapbox-gl/dist/mapbox-gl.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -290,9 +290,9 @@
   html {
     @apply font-sans;
   }
-}
+} */
 
-/* @import "tailwindcss";
+@import "tailwindcss";
 @import "mapbox-gl/dist/mapbox-gl.css";
 
 :root {
@@ -482,4 +482,4 @@ body {
 .map-plus-cursor .mapboxgl-canvas,
 .map-plus-cursor .mapboxgl-canvas:active {
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M12 4v16M4 12h16' stroke='%2300eaff' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M12 4v16M4 12h16' stroke='%2300232d' stroke-width='4.5' stroke-linecap='round' opacity='0.35'/%3E%3C/svg%3E") 12 12, crosshair !important;
-} */
+}

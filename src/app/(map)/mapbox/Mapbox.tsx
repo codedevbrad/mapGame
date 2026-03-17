@@ -35,6 +35,8 @@ import {
   getDebugBuildingInfo,
   type DebugBuildingInfo
 } from "@/app/(map)/mapbox/debug_system/buildingSelector/func"
+import { startGlobeAutoRotate } from "@/app/(map)/mapbox/camera/autoRotate"
+import { MapLensOverlay } from "@/app/(map)/mapbox/camera/lens"
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
@@ -73,6 +75,7 @@ export default function MapboxMap({
   const onVpnNodeSelectRef = useRef<MapboxMapProps["onVpnNodeSelect"]>(onVpnNodeSelect)
   const onSatelliteSelectRef = useRef<MapboxMapProps["onSatelliteSelect"]>(onSatelliteSelect)
   const onSatellitesChangeRef = useRef<MapboxMapProps["onSatellitesChange"]>(onSatellitesChange)
+  const autoRotateCleanupRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     vpnNodesRef.current = vpnNodes
@@ -137,6 +140,8 @@ export default function MapboxMap({
     })
     mapRef.current = map
     onMapReadyRef.current?.(map)
+    autoRotateCleanupRef.current?.()
+    autoRotateCleanupRef.current = startGlobeAutoRotate(map)
 
     map.addControl(new mapboxgl.FullscreenControl(), "top-left")
     map.addControl(new mapboxgl.ScaleControl({ unit: "metric" }), "bottom-left")
@@ -216,6 +221,8 @@ export default function MapboxMap({
       map.off("mouseleave", handleMapMouseLeave)
       satelliteLayerControllerRef.current?.cleanup()
       satelliteLayerControllerRef.current = null
+      autoRotateCleanupRef.current?.()
+      autoRotateCleanupRef.current = null
       selectedBuildingPopupRef.current?.remove()
       selectedBuildingPopupRef.current = null
       mapRef.current = null
@@ -266,6 +273,7 @@ export default function MapboxMap({
           ref={mapContainer}
           className="h-full w-full "
         />
+        <MapLensOverlay />
       </div>
       <DebugSystemPopover selectedBuilding={debugBuildingInfo} />
       {/* <div className="pointer-events-none absolute bottom-0 left-0 z-30 h-20 w-full bg-background" /> */}
